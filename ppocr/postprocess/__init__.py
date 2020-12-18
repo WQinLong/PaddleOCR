@@ -24,9 +24,14 @@ __all__ = ['build_post_process']
 
 def build_post_process(config, global_config=None):
     from .db_postprocess import DBPostProcess
+    from .east_postprocess import EASTPostProcess
+    from .sast_postprocess import SASTPostProcess
     from .rec_postprocess import CTCLabelDecode, AttnLabelDecode
-    
-    support_dict = ['DBPostProcess', 'CTCLabelDecode', 'AttnLabelDecode']
+    from .cls_postprocess import ClsPostProcess
+
+    support_dict = [
+        'DBPostProcess', 'EASTPostProcess', 'SASTPostProcess', 'CTCLabelDecode', 'AttnLabelDecode', 'ClsPostProcess'
+    ]
 
     config = copy.deepcopy(config)
     module_name = config.pop('name')

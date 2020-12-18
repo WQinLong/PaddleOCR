@@ -35,13 +35,25 @@ from .text_image_aug import tia_perspective, tia_stretch, tia_distort
 
 
 class RecAug(object):
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, use_tia=True, aug_prob=0.4, **kwargs):
+        self.use_tia = use_tia
+        self.aug_prob = aug_prob
 
     def __call__(self, data):
         img = data['image']
-        img = warp(img, 10)
+        img = warp(img, 10, self.use_tia, self.aug_prob)
         data['image'] = img
+        return data
+
+
+class ClsResizeImg(object):
+    def __init__(self, image_shape, **kwargs):
+        self.image_shape = image_shape
+
+    def __call__(self, data):
+        img = data['image']
+        norm_img = resize_norm_img(img, self.image_shape)
+        data['image'] = norm_img
         return data
 
 
@@ -194,7 +206,7 @@ class Config:
     Config
     """
 
-    def __init__(self, ):
+    def __init__(self, use_tia):
         self.anglex = random.random() * 30
         self.angley = random.random() * 15
         self.anglez = random.random() * 10
@@ -203,6 +215,7 @@ class Config:
         self.shearx = random.random() * 0.3
         self.sheary = random.random() * 0.05
         self.borderMode = cv2.BORDER_REPLICATE
+        self.use_tia = use_tia
 
     def make(self, w, h, ang):
         """
@@ -219,9 +232,9 @@ class Config:
         self.w = w
         self.h = h
 
-        self.perspective = True
-        self.stretch = True
-        self.distort = True
+        self.perspective = self.use_tia
+        self.stretch = self.use_tia
+        self.distort = self.use_tia
 
         self.crop = True
         self.affine = False
@@ -317,16 +330,14 @@ def get_warpAffine(config):
     return rz
 
 
-def warp(img, ang):
+def warp(img, ang, use_tia=True, prob=0.4):
     """
     warp
     """
     h, w, _ = img.shape
-    config = Config()
+    config = Config(use_tia=use_tia)
     config.make(w, h, ang)
     new_img = img
-
-    prob = 0.4
 
     if config.distort:
         img_height, img_width = img.shape[0:2]

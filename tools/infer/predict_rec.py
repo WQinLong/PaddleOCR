@@ -13,22 +13,24 @@
 # limitations under the License.
 import os
 import sys
+
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
 sys.path.append(os.path.abspath(os.path.join(__dir__, '../..')))
 
 import cv2
-import copy
 import numpy as np
 import math
 import time
-
+import traceback
 import paddle.fluid as fluid
 
 import tools.infer.utility as utility
 from ppocr.postprocess import build_post_process
 from ppocr.utils.logging import get_logger
 from ppocr.utils.utility import get_image_file_list, check_and_read_gif
+
+logger = get_logger()
 
 
 class TextRecognizer(object):
@@ -80,7 +82,7 @@ class TextRecognizer(object):
         # rec_res = []
         rec_res = [['', 0.0]] * img_num
         batch_num = self.rec_batch_num
-        predict_time = 0
+        elapse = 0
         for beg_img_no in range(0, img_num, batch_num):
             end_img_no = min(img_num, beg_img_no + batch_num)
             norm_img_batch = []
@@ -110,8 +112,10 @@ class TextRecognizer(object):
                 output = output_tensor.copy_to_cpu()
                 outputs.append(output)
             preds = outputs[0]
-            rec_res = self.postprocess_op(preds)
-            elapse = time.time() - starttime
+            rec_result = self.postprocess_op(preds)
+            for rno in range(len(rec_result)):
+                rec_res[indices[beg_img_no + rno]] = rec_result[rno]
+            elapse += time.time() - starttime
         return rec_res, elapse
 
 
@@ -131,8 +135,8 @@ def main(args):
         img_list.append(img)
     try:
         rec_res, predict_time = text_recognizer(img_list)
-    except Exception as e:
-        print(e)
+    except:
+        logger.info(traceback.format_exc())
         logger.info(
             "ERROR!!!! \n"
             "Please read the FAQ：https://github.com/PaddlePaddle/PaddleOCR#faq \n"
@@ -141,11 +145,11 @@ def main(args):
             "Please set --rec_image_shape='3,32,100' and --rec_char_type='en' ")
         exit()
     for ino in range(len(img_list)):
-        print("Predicts of %s:%s" % (valid_image_file_list[ino], rec_res[ino]))
-    print("Total predict time for %d images, cost: %.3f" %
-          (len(img_list), predict_time))
+        logger.info("Predicts of {}:{}".format(valid_image_file_list[ino], rec_res[
+            ino]))
+    logger.info("Total predict time for {} images, cost: {:.3f}".format(
+        len(img_list), predict_time))
 
 
 if __name__ == "__main__":
-    logger = get_logger()
     main(utility.parse_args())

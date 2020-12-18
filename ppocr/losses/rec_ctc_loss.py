@@ -32,5 +32,5 @@ class CTCLoss(nn.Layer):
         labels = batch[1].astype("int32")
         label_lengths = batch[2].astype('int64')
         loss = self.loss_func(predicts, labels, preds_lengths, label_lengths)
-        loss = loss.mean()
+        loss = loss.mean()  # sum
         return {'loss': loss}
